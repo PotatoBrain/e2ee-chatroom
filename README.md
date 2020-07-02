@@ -18,10 +18,10 @@ To be automated.
 This project does not support Windows 10, it may in the future, as it is a hassle to figure everything out and to get it working there, for now.
 
 # Running the program
-If you want to connect to someone's room you will have to download the client-side program from [/client_side](url) , and then inside that folder open a terminal and type 
+If you want to connect to someone's room you will have to download the client-side program from https://github.com/PotatoBrain/e2ee-chatroom/tree/master/client-side , and then inside that folder open a terminal and type 
 > python3.8 client.py
 
-If you want to host a room - you will have to create your own Tor hidden service manually(to be automated in the future), that will listen on the given port, change the server config(the address, port, room name, room rules; do not change the database and table setting) in the **server_config.json** manually(GUI in the future) on [/server_side](url) and run it with 
+If you want to host a room - you will have to create your own Tor hidden service manually(to be automated in the future), that will listen on the given port, change the server config(the address, port, room name, room rules; do not change the database and table setting) in the **server_config.json** manually(GUI in the future) on https://github.com/PotatoBrain/e2ee-chatroom/tree/master/server-side and run it with 
 > python3.8 server.py
 
 # How the server-side works:
