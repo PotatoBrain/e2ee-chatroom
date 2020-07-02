@@ -94,7 +94,7 @@ get_request(sys.argv[1])"""
             current_version = 1.1
         try:
             newest_version = self.get_text_trough_Tor(
-                "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/server-side/server_version.md")
+                "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/master/server-side/server_version.md")
             
             if float(newest_version) > float(current_version):
                 update = input("Update avaliable, download it? (Y?)").lower()
@@ -108,7 +108,7 @@ get_request(sys.argv[1])"""
                         
                     if not os.path.isfile('server_config.json'):
                         server_config = self.get_text_trough_Tor(
-                            "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/server-side/server_config.json")
+                            "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/master/server-side/server_config.json")
                         with open('server_config.json', 'w') as new_server_config:
                             new_server_config.write(server_config)
                         print("New server config downloaded, it's recommneded to edit paramaters such as room name and rules.")
