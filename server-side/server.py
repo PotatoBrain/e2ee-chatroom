@@ -69,7 +69,7 @@ get_request(sys.argv[1])"""
         self.make_if_not_exists()
         # This checks if there are any new files to download, as opposed to updating them.
         site_info = self.get_text_trough_Tor(
-            "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/master/scripts/server-side/server_files_list.json")
+            "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/master/server-side/server_files_list.json")
         print(site_info)
         site_downloads_list = json.loads(site_info)
         try:
@@ -94,7 +94,7 @@ get_request(sys.argv[1])"""
             current_version = 1.1
         try:
             newest_version = self.get_text_trough_Tor(
-                "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/scripts/server-side/server_version.md")
+                "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/server-side/server_version.md")
             
             if float(newest_version) > float(current_version):
                 update = input("Update avaliable, download it? (Y?)").lower()
@@ -108,7 +108,7 @@ get_request(sys.argv[1])"""
                         
                     if not os.path.isfile('server_config.json'):
                         server_config = self.get_text_trough_Tor(
-                            "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/scripts/server-side/server_config.json")
+                            "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/server-side/server_config.json")
                         with open('server_config.json', 'w') as new_server_config:
                             new_server_config.write(server_config)
                         print("New server config downloaded, it's recommneded to edit paramaters such as room name and rules.")
