@@ -1,0 +1,5 @@
+PyQt5
+psutil
+rsa
+requests[socks]
+pycryptodome
