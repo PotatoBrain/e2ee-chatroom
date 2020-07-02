@@ -1,5 +1,4 @@
 TO DO LIST(so far)
-* Route requesting of gitlab texts through Tor, as well.
 * Private messaging(1o1, server can't read)
 * Automate the installation Python3.8 and it's pip - pip3.8, for Operating System we're familiar with
 * Uploading images to the chatroom DIRECTLY FROM THE COMPUTER? Uploading through links is implemented.
