@@ -15,6 +15,9 @@ import os
 import sys
 import json
 import psutil
+import subprocess
+import tempfile
+
 
 
 class PreImport:
@@ -72,7 +75,8 @@ get_request(sys.argv[1])"""
             import requests
         except ModuleNotFoundError:
             os.system('pip3.8 install requests[socks]')
-            check_for_updates()
+            self.check_for_updates()
+        self.make_if_not_exists()
         # This checks if there are any new files to download, as opposed to updating them.
         site_info = self.get_text_trough_Tor("https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/master/client-side/client_files_list.json")
         site_downloads_list = json.loads(site_info)
