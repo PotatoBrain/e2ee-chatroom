@@ -74,7 +74,7 @@ get_request(sys.argv[1])"""
             os.system('pip3.8 install requests[socks]')
             check_for_updates()
         # This checks if there are any new files to download, as opposed to updating them.
-        site_info = self.get_text_trough_Tor("https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/scripts/client-side/client_files_list.json")
+        site_info = self.get_text_trough_Tor("https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/client-side/client_files_list.json")
         site_downloads_list = json.loads(site_info)
         try:
             with open('client_files_list.json', 'r') as downloads_list_json:
@@ -96,7 +96,7 @@ get_request(sys.argv[1])"""
             current_version = 1.1
         try:
             newest_version = self.get_text_trough_Tor(
-                "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/scripts/client-side/client_version.md")
+                "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/-/raw/master/client-side/client_version.md")
             if float(newest_version) > float(current_version):
                 update = input("Update avaliable, download it? (Y?)").lower()
                 if update == "y"\
