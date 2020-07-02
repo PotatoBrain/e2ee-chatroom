@@ -70,7 +70,6 @@ get_request(sys.argv[1])"""
         # This checks if there are any new files to download, as opposed to updating them.
         site_info = self.get_text_trough_Tor(
             "https://raw.githubusercontent.com/PotatoBrain/e2ee-chatroom/master/server-side/server_files_list.json")
-        print(site_info)
         site_downloads_list = json.loads(site_info)
         try:
             # Tries to open the file, handles an error if doesn't exist - creates a new file with the newest file requirements.
