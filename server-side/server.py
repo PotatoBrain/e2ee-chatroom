@@ -79,7 +79,7 @@ get_request(sys.argv[1])"""
                 # There are some new files to be downloaded, thus - update our local list.
                 with open('server_files_list.json', 'w') as new_server_files_list:
                     new_server_files_list.write(json.dumps(site_downloads_list))
-                    print('Updated list of file links')
+                    print('Downloaded list of file links')
         except FileNotFoundError:
             with open('server_files_list.json', 'w') as new_server_files_list:
                 new_server_files_list.write(json.dumps(site_downloads_list))
@@ -103,7 +103,7 @@ get_request(sys.argv[1])"""
                         newest_file_code = self.get_text_trough_Tor(site_downloads_list[file_name])
                         with open('{}'.format(file_name), 'w') as new_file:
                             new_file.write(newest_file_code)
-                        print('Updated -', file_name)
+                        print('Downloaded -', file_name)
                         
                     if not os.path.isfile('server_config.json'):
                         server_config = self.get_text_trough_Tor(
