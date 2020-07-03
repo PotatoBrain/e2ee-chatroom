@@ -111,7 +111,7 @@ get_request(sys.argv[1])"""
                         newest_file_code = self.get_text_trough_Tor(downloads_list[file_name])
                         with open('{}'.format(file_name), 'w') as new_file:
                             new_file.write(newest_file_code)
-                        print('Updated -', file_name)
+                        print('Downloaded -', file_name)
                     print('Updates downloaded, please restart the program..')
                     me = os.getpid()
                     sys.exit(self.kill_proc_tree(me))
