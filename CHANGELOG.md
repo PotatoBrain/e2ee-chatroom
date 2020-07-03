@@ -1,5 +1,5 @@
 __Update 1.51__
-* __Client side__ - changed the scaling of images: if the image is over 620 in width, it will be scaled down to 1. fit the chatroom window(whose size will probably be changed in the future/made resizable) , but also 2. there are about 10-20 whitespace lines before and after the image is sent, if it's over the 620 pixels in width.
+* __Client side__ - changed the scaling of images: if the image is over 620 pixels in width, it will be scaled down to 1. fit the chatroom window(whose size will probably be changed in the future/made resizable) , but also 2. there are about 10-20 whitespace lines before and after the image is sent, if it's over the 620 pixels in width.
 We are using a library called __cv2__ to get the size of the temporarily downloaded image.
 If the image is under 620 pixels in width ( height is not checked because there's no problem with that ) - the image is actually not resized, in order to keep the original (the best) quality of the image.
 * __Client side__ - tweaked the feature that changes links in the square brackets (example [invidio.us]) to a clickable link __ONLY__ IF the link ...is actually a link, in other words, if it's not just words, it has to contain ends such as '.com', '.org' and such.
