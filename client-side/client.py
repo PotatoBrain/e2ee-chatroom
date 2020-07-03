@@ -659,7 +659,7 @@ class Ui_MainWindow(QWidget):
                     version_status = 'GOOD, v{}.'.format(current_client_version)
                     color_code = "#00ff35"
                 elif older_server:
-                    version_status = 'Your client version is newer than the required one(v{}), there may be problems.'.format(current_client_version)
+                    version_status = 'Your client version(v{0}) is newer than the required one(v{1}), there may be problems.'.format(current_client_version, required_client_version)
                     color_code = "#FF0000"
                 else:
                     version_status = "Your client version is {0}, and the required client version for this room is {1}. Consider updating your client!".format(current_client_version, required_client_version)
