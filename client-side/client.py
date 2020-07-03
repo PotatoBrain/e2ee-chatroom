@@ -653,6 +653,7 @@ class Ui_MainWindow(QWidget):
                 required_client_version = self.room_info['CLIENT_REQUIRED']
                 with open('client_version.md', 'r') as version_file:
                     current_client_version = version_file.read()
+                older_version = float(required_client_version) < float(current_client_version)
                 version_ok = float(required_client_version) == float(current_client_version)
                 if version_ok:
                     version_status = 'GOOD, v{}.'.format(current_client_version)
