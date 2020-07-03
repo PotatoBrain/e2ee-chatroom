@@ -37,7 +37,7 @@ def prepare_html(image_dir=False, link=False, img_tag=''):
     os.remove('temp_img.jpg')
     data_uri = base64.b64encode(image).decode('utf-8')
     if image_width > 800:
-        img_tag += '<img src="data:image/png;base64,{0}" width="620" height="400">'.format(data_uri)  
+        img_tag += '<img src="data:image/png;base64,{0}" width="610" height="400">'.format(data_uri)  
     else:
         img_tag += '<img src="data:image/png;base64,{0}"'.format(data_uri)  
     print(img_tag)
