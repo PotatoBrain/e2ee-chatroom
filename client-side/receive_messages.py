@@ -68,8 +68,9 @@ class ReceiveMessage(QThread):
 
     def send_message_to_textBrowser(self):
         username = f"{datetime.now().strftime('%H:%M')} {self.received_username}"
-        text = self.received_message
         color_code = self.received_privilege
+        text = self.received_message
+        is_link = True
         # This next piece of code basically turns something like [youtube.com] into a [youtube.com] clickable link,
         # Unfortunately also all of the { and } into [ and ].. hopefully I'll find a way around this in the future,
         # for not focused on more important features.
@@ -105,9 +106,17 @@ class ReceiveMessage(QThread):
                         after_www = link.split("www.")[1]
                         website = after_www.split(".")[0]
                     else:
-                        after_https = link.split("https://")[1]
+                        after_https = link.split("https://")[1].strip()
                         website = after_https.split(".")[0]
-                    text = before_link +  f"<a href=\"{link}\"><span style=\" text-decoration: underline; color:#0000ff;\">{website}</span></a>" + after_link
+                        if after_https == website:
+                            # For some reason even if there's not a '.', the website is equal to after_https which means that the given link
+                            # does not end with anything (examples '.com', '.ord', etc.)
+                            # This means that people can send regular tags such as "[SPOILER]" and then a link such as "[https://some-spoiler.com]"(made up)
+                            is_link = False
+                        else:
+                            is_link = True
+                    if is_link:
+                        text = before_link +  f"<a href=\"{link}\"><span style=\" text-decoration: underline; color:#0000ff;\">{website}</span></a>" + after_link
             except:
                 # This turns all the [ and ] we changed into { and } back into [ and ].
                 # Unfortunately 
