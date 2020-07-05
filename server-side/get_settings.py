@@ -18,3 +18,4 @@ def return_config(json_file : str):
 	with open('{}.json'.format(json_file), 'r') as myfile:
 	    data=myfile.read()
 	return json.loads(data)
+

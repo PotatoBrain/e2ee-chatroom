@@ -33,3 +33,4 @@ def hash_the_password(password, salt=None):
 
 	hashed_password = base64.urlsafe_b64encode(kdf.derive(password))
 	return {'salt': salt, 'password': hashed_password}
+

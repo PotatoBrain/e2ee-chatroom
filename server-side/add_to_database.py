@@ -24,3 +24,4 @@ def insert_user(db_name, table_name, username, password):
         cursor = conn.cursor()
         cursor.execute("INSERT INTO {}(username, hashed_password, salt, power_level, banned) "
                        "VALUES(?, ?, ?, ?, ?)".format(table_name), (username, created_password, salt, '0', 0))
+

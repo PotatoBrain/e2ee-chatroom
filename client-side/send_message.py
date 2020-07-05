@@ -14,26 +14,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+import time
+import sys
 
 
 class SendMessage(QThread):
-    print('1')
-    output = pyqtSignal(bool, QLineEdit)
-    print('2')
+    output = pyqtSignal(bool, QLineEdit, bool, int)
 
     def __init__(self, parent=None):
         # super().__init__(self, parent)
         QThread.__init__(self, parent)
         self.exiting = False
-        print('3')
 
     def __del__(self):
         self.exiting = True
-        print('4')
         try:
             self.wait()
         except RuntimeError:
-            print('5')
             # Can't exit - class already finished.
             pass
 
@@ -41,37 +38,41 @@ class SendMessage(QThread):
         (
             self.HEADER_LENGTH, 
             self.server_socket, 
-            self.textEdit, 
-            self.encrypt_a_message
+            self.textEdit,
+            self.max_chars,
+            self.encrypt_a_message,
+            self.aes_encrypt_data
         ) = args
-        print('6')
         self.start()
 
     def run(self):
-        print('7')
         message = self.textEdit.text()
+        message_size = sys.getsizeof(message)-49
         if message == '/clear':
-            # self.textBrowser.clear()
-            # self.textEdit.setText("")
-            # We will do this afterwards.. for some reason I get this error I do not understand:
-            #   QObject: Cannot create children for a parent that is in a different thread.
-            #   (Parent is QTextDocument(0x242f5b0), parent's thread is QThread(0x1fa6a30), current thread is SendMessage(0x23009e0)
-            #   Segmentation fault (core dumped)
             self.output.emit(True,
-                             self.textEdit)
+                             self.textEdit,
+                             False,
+                             0)
+        elif message_size > self.max_chars:
+            self.output.emit(False,
+                             self.textEdit,
+                             True,
+                             message_size)
         else:
-            print('8')
             message = message.encode('utf-8')
-            encrypted_message = self.encrypt_a_message(message=message)
-            print('9')
+            RSA_encrypted_initialization_vector, encrypted_message = self.aes_encrypt_data(data=message)
             # If message is not empty - send it
-            if message and encrypted_message and not self.exiting:
-                print('10')
+            if message and RSA_encrypted_initialization_vector and encrypted_message and not self.exiting:
                 # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
+                message_header = f"{len(str(RSA_encrypted_initialization_vector)):<{self.HEADER_LENGTH}}".encode('utf-8')
+                self.server_socket.send(message_header + RSA_encrypted_initialization_vector)
+                time.sleep(0.5)
                 message_header = f"{len(str(encrypted_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
                 self.server_socket.send(message_header + encrypted_message)
-                print('11')
                 self.textEdit.setText("")
                 # Update the 2 variables.
                 self.output.emit(False,
-                                 self.textEdit)
+                                self.textEdit, 
+                                False,
+                                0)
+

@@ -11,25 +11,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import json
+import requests
+import sys
 
 
-def return_or_write_config(new_config=None):
-	if new_config is None:
-		read_write = 'r'
-	else:
-		read_write = 'w'
-	with open('server_config.json', read_write) as myfile:
-		if new_config is None:
-			data = myfile.read()
-			return json.loads(data)
-		else:
-			data = myfile.write(json.dumps(new_config))
+def get_request(link):
+    try:
+        text = requests.get(link).text
+        print(text)
+    except requests.exceptions.MissingSchema as e:
+        print('False', e)
 
 
-def update_config(database_name, table_name):
-	current_dict = return_or_write_config()
-	current_dict['database_name'] = database_name
-	current_dict['table_name'] = table_name
-	return_or_write_config(current_dict)
-
+get_request(sys.argv[1])

@@ -11,17 +11,17 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from Crypto.Random import get_random_bytes
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-import multiprocessing
 import rsa
+import sys
+import os
 
 
-class GenerateKeys(QThread):
+class EncryptMessage(QThread):
     print('1')
-    output = pyqtSignal(bytes, rsa.key.PublicKey, rsa.key.PrivateKey)
+    output = pyqtSignal(bool, bytes)
     print('2')
 
     def __init__(self, parent=None):
@@ -40,14 +40,26 @@ class GenerateKeys(QThread):
             # Can't exit - class already finished.
             pass
 
-    def start_generating_keys(self, bit_size):
+    def start_encrypting(self, *args):
+        (
+            self.server_key,
+            self.message
+        ) = args
         print('6')
-        self.bit_size = bit_size
         self.start()
 
-    def run(self):
-        aes_key = get_random_bytes(32)  # for AES256 encryption.
-        (public_key, private_key) = rsa.newkeys(self.bit_size, poolsize=multiprocessing.cpu_count())
-        self.output.emit(aes_key, public_key, private_key)
-        
-
+    def run(self): 
+        with open('over_head.txt', 'r') as read_over_head:
+                over_head = bytes(int(read_over_head.read()))
+        print(sys.getsizeof(over_head))
+        print(sys.getsizeof(self.message+over_head))
+        if int(sys.getsizeof(self.message+over_head)) > 501:
+            self.output.emit(False, b'0')
+        else:
+            # Make sure that the server can send our message with additional information such as the current number of users
+            # in the chatroom, the color code and the sender's username.
+            # color code = 56 bytes, users = 28 bytes, username = 59 bytes. Alltogether = 143 bytes.
+            #random_bytes = os.urandom(110)  # For some reason 110 gives us exactly 143 bytes of head-room.
+            encrypted_message = rsa.encrypt(self.message, self.server_key)
+            print('it actually does get past this.')
+            self.output.emit(True, encrypted_message)

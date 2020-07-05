@@ -13,3 +13,4 @@ def prepare_html(image_dir=False, link=False, img_tag=''):
         print('False')
 
 prepare_html(sys.argv[1], sys.argv[2])
+

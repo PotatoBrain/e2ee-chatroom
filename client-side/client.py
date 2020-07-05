@@ -27,7 +27,6 @@ class PreImport:
     
     @staticmethod
     def kill_proc_tree(pid, including_parent=True):
-        
         parent = psutil.Process(pid)
         if including_parent:
             parent.kill()
@@ -139,8 +138,10 @@ try:
     from datetime import datetime
     import send_message as send_message_file
     from Crypto.Util.Padding import pad, unpad
-    import receive_messages as receive_messages_file
+    import encrypt_message as encrypt_message_file
+    import receive_messages_main as receive_messages_file
     import generate_keys as generate_encryption_keys
+    import receive_the_message as receive_the_message_file
     from Crypto.Util.RFC1751 import key_to_english, english_to_key
     from PyQt5.QtCore import *
     from PyQt5.QtGui import *
@@ -168,12 +169,17 @@ class Ui_MainWindow(QWidget):
         self.aes_key = None
         self.aes_iv = None
         self.image = None
-        self.bit_size = 4096
+        self.ok_to_pass = False
+        self.show_images = True
         self.login_register = None
         self.next_json_object = None
+        self.first_time_connecting = True
+        self.next_encrypted_message = False
         self.generate_keys_thread = generate_encryption_keys.GenerateKeys()
         self.send_message_to_server_thread = send_message_file.SendMessage()
         self.receive_messages_thread = receive_messages_file.ReceiveMessage()
+        self.encrypt_a_message_thread = encrypt_message_file.EncryptMessage()
+        self.receive_the_message_thread = receive_the_message_file.ReceiveMessage()
         self.width = int(QDesktopWidget().availableGeometry().width()/4)
         self.height = int(QDesktopWidget().availableGeometry().height()/4)
         self._translate = QCoreApplication.translate
@@ -350,7 +356,7 @@ class Ui_MainWindow(QWidget):
         self.textBrowser.setObjectName("textBrowser")
         self.textBrowser.setOpenExternalLinks(True)
         MainWindow.setCentralWidget(self.centralwidget)
-
+        #
         palette = QPalette()
         brush = QBrush(QColor(255, 0, 4))
         brush.setStyle(Qt.SolidPattern)
@@ -363,7 +369,6 @@ class Ui_MainWindow(QWidget):
         palette.setBrush(QPalette.Disabled, QPalette.WindowText, brush)
         font = QFont()
         font.setPointSize(12)
-        #
         self.username_label = QLabel(self.centralwidget)
         self.username_label.setPalette(palette)
         self.username_label.setGeometry(QRect(0, 0, 101, 18))
@@ -497,6 +502,12 @@ class Ui_MainWindow(QWidget):
         # Receiving messages
         self.receive_messages_thread.output.connect(
             self.receive_messages_update_variables)  # Update a few variables.
+        self.receive_the_message_thread.output.connect(
+            self.give_message_contents_to_main)
+        
+        # Encrypted message
+        self.encrypt_a_message_thread.output.connect(
+            self.receive_encrypted_message)
         ######################################################################################
         # This above started a few threads so the code doesn't block the main gui loop.
 
@@ -551,6 +562,19 @@ class Ui_MainWindow(QWidget):
         else:
             self.password_lineEdit.setEchoMode(2)
 
+    def give_message_contents_to_main(self, *args):
+        self.send_message_to_server_thread.get_message_contents(args)
+
+    def start_encrypting_a_message(self, message):
+        self.encrypt_a_message_thread.start_encrypting(
+            self.server_key,
+            message
+            )
+        
+    def receive_encrypted_message(self, *args):
+        print('In receive_encrypted_message.')
+        (self.ok_to_pass, self.next_encrypted_message) = args
+
     def start_generating_keys_thread(self):
         self.generate_keys_button.setEnabled(False)
         self.label3.show()
@@ -568,11 +592,12 @@ class Ui_MainWindow(QWidget):
         self.label3.show()
 
         print('Starting generating encryption keys, this may take up to a minute, depending on your hardware.')
-        self.generate_keys_thread.start_generating_keys()
+        self.generate_keys_thread.start_generating_keys(self.bit_size)
         
     def receive_generated_keys(self, *args):
         (self.aes_key, self.public_key, self.private_key) = args
         print('Keys generated.')
+        print('my public key is: ', self.public_key)
         self.label3.setText(self._translate("MainWindow", "Keys generated, please\n login/register now."))
         self.generate_keys_button.hide()
         self.register_or_login_button.show()
@@ -581,19 +606,33 @@ class Ui_MainWindow(QWidget):
         self.receive_messages_thread.start_receiving_messages(
             self.HEADER_LENGTH,
             self.server_socket,
+            self.IP,
+            self.PORT,
+            self.login_username, 
+            self.login_password,
+            self.show_images,
+            self.aes_key,
+            self.public_key,
+            self.server_key,
+            self.server_aes_key,
             self.textBrowser,
             self.pushButton,
             self.label4,
+            self.decrypt_aes_data,
+            self.decrypt_a_message,
             self.decrypt_json_object)
 
     def receive_messages_update_variables(self, *args):
-        (self.textBrowser, color_code, username, text) = args
-        self.textBrowser.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD    HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-            "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-            "p, li { white-space: pre-wrap; }\n"
-            "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-            f"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:{color_code}; \">{username}<font style=\" color:#FFFFFF;\"> >  {text}</font></p></body></html>\n")
-        #self.textBrowser.moveCursor(QTextCursor.End)
+        (self.textBrowser, color_code, username, text, new_socket, server_socket, self.server_key, self.server_aes_key) = args
+        if not new_socket:
+            self.textBrowser.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD    HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+                "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+                "p, li { white-space: pre-wrap; }\n"
+                "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+                f"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:{color_code}; \">{username}<font style=\" color:#FFFFFF;\"> >  {text}</font></p></body></html>\n")
+            #self.textBrowser.moveCursor(QTextCursor.End)
+        else:
+            self.server_socket = server_socket
 
     def start_sending_messages_thread(self):
         self.pushButton.setEnabled(False)
@@ -601,13 +640,21 @@ class Ui_MainWindow(QWidget):
             self.HEADER_LENGTH,
             self.server_socket,
             self.textEdit,
-            self.encrypt_a_message)
+            self.max_chars,
+            self.encrypt_a_message,
+            self.aes_encrypt_data)
 
     def send_message_to_server_update_variables(self, *args):
-        (clear_browser, self.textEdit) = args
+        (clear_browser, self.textEdit, message_too_long, message_size) = args
         if clear_browser:
             self.textBrowser.clear()
             self.textEdit.setText("")
+        elif message_too_long:
+            self.textBrowser.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+                    "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+                    "p, li { white-space: pre-wrap; }\n"
+                    "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+                    f"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#ff6060; \">MESSAGE: <font style=\" color:#ff6060; \">Your message is {message_size} characters long, and the character limit is {self.max_chars}.</font></p>\n")
 
     def send_message_to_server_update_Ui(self):
         self.pushButton.setEnabled(True)        
@@ -643,14 +690,18 @@ class Ui_MainWindow(QWidget):
                 room_info_please_header = f"{len(room_info_please):<{self.HEADER_LENGTH}}".encode('utf-8')
                 self.server_socket.send(room_info_please_header + room_info_please)
                 received_info = self.loop().decode('utf-8')
-                print(received_info)
 
                 self.retry_json(received_info)
                 self.room_info = self.next_json_object
-                room_encryption_size = self.room_info['BIT_SIZE']
+                server_bit_size = self.room_info['BIT_SIZE']
+                if server_bit_size < 4096:
+                    self.bit_size = server_bit_size
+                else:
+                    self.bit_size = 4096
                 room_name = self.room_info['ROOM_NAME']
                 room_rules = self.room_info['ROOM_RULES']
                 required_client_version = self.room_info['CLIENT_REQUIRED']
+                self.max_chars = self.room_info['MAX_CHARS']
                 with open('client_version.md', 'r') as version_file:
                     current_client_version = version_file.read()
                 older_server = float(required_client_version) < float(current_client_version)
@@ -664,7 +715,6 @@ class Ui_MainWindow(QWidget):
                 else:
                     version_status = "Your client version is {0}, and the required client version for this room is {1}. Consider updating your client!".format(current_client_version, required_client_version)
                     color_code = "#FF0000"
-                
 
                 self.textBrowser.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
                     "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
@@ -685,7 +735,7 @@ class Ui_MainWindow(QWidget):
                     "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
                     "p, li { white-space: pre-wrap; }\n"
                     "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-                    f"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#FF0000; \">ROOM ENCRYPTION: <font style=\" color:#FFFFFF; \">RSA-{room_encryption_size}</font></p>\n")
+                    f"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; color:#FF0000; \">ROOM ENCRYPTION: <font style=\" color:#FFFFFF; \">RSA-{self.bit_size}</font></p>\n")
                 self.textBrowser.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
                     "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
                     "p, li { white-space: pre-wrap; }\n"
@@ -724,10 +774,6 @@ class Ui_MainWindow(QWidget):
         message_length = int(message_header.decode('utf-8').strip())
         message = self.server_socket.recv(message_length)
         return message
-
-    def receive_messages(self):
-        # Moved to the receive_messages.py
-        pass
 
     def loop(self, key=False):
         while True:
@@ -768,17 +814,18 @@ class Ui_MainWindow(QWidget):
     def handle_client(self):
         self.display_message = None
         display_message = None
-        self.connect_to_server(True)
+        if self.first_time_connecting:
+            self.connect_to_server(just_connect=True)
+            self.first_time_connecting = False
 
         # Send my public key.
         public_key_header = f"{len(str(self.public_key)):<{self.HEADER_LENGTH}}".encode('utf-8')
         self.server_socket.send(public_key_header + self.public_key.save_pkcs1(format='DER'))
-
+        
         # Receive the server's public key.
-        self.server_key = self.loop(True)
+        self.server_key = self.loop(key=True)
         print('server public key is: ', self.server_key)
         aes_key_to_go = key_to_english(self.aes_key)
-        print('aes_key_to_go --- ', aes_key_to_go)
         username_password = self.encrypt_json_object(dictionary=
             {"login_register": self.login_register, "username": self.login_username, "password": self.login_password, "aes_key": aes_key_to_go})
 
@@ -789,6 +836,7 @@ class Ui_MainWindow(QWidget):
         answer = self.decrypt_json_object(encrytped_json_object=self.loop())
         display_message = answer['login_status']
         self.current_users = answer['users']
+        self.server_aes_key = english_to_key(answer['aes_key'])
         self.id_identifier = answer['id_identifier']
 
         if display_message == "1":
@@ -825,7 +873,6 @@ class Ui_MainWindow(QWidget):
             self.status_label.setText(self._translate("MainWindow", "User does not exist."))
             self.allowed_or_not(False)
         
-        print(display_message)
         self.display_message = display_message
         if self.display_message == "3" or self.display_message == "4":
             self.label3.setText(self._translate("MainWindow", self.status_label.text()))
@@ -849,7 +896,7 @@ class Ui_MainWindow(QWidget):
             
             self.register_or_login_button.hide()
             self.continue_button.show()
-
+            
     def encrypt_a_message(self, *, message):
         try:
             encrypted_message = rsa.encrypt(message, self.server_key)
@@ -861,7 +908,7 @@ class Ui_MainWindow(QWidget):
                                                 "</style></head><body style=\" font-family:\'Ubuntu\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Too long message. Try again.</p></body></html>\n")
             return False
-
+    
     def aes_encrypt_data(self, *, data):
         cipher = AES.new(self.aes_key, AES.MODE_CBC)
         ct_bytes = cipher.encrypt(pad(data, AES.block_size))
@@ -888,12 +935,13 @@ class Ui_MainWindow(QWidget):
         except rsa.pkcs1.DecryptionError:
             return "FAILED"
 
-    def decrypt_aes_data(self, iv, *, ciphertext):
+    def decrypt_aes_data(self, server_aes_key, iv, *, ciphertext):
         iv = b64decode(iv)
         ciphertext = b64decode(ciphertext)
-        cipher = AES.new(self.aes_key, AES.MODE_CBC, iv)
-        data = unpad(cipher.decrypt(ciphertext), AES.block_size).decode('utf-8')
-        print('decrypted image: ', data)
+        cipher = AES.new(server_aes_key, AES.MODE_CBC, iv)
+        json_object = unpad(cipher.decrypt(ciphertext), AES.block_size).decode('utf-8')
+        self.retry_json(json_object)
+        data = self.next_json_object
         return data
 
     def retry_json(self, received_info):
@@ -920,7 +968,6 @@ class Ui_MainWindow(QWidget):
             # For now I just remove those 3 last numbers and it works.
 
         except ValueError:
-            print(received_info)
             new_json_object = received_info[:-3]
             self.retry_json(new_json_object)
 
@@ -961,6 +1008,7 @@ class Ui_MainWindow(QWidget):
             self.status_label.show()
             self.login_button.setEnabled(True)
             self.register_button.setEnabled(True)
+            self.first_time_connecting = True
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(self._translate("MainWindow", "Chat"))
@@ -986,6 +1034,7 @@ class Ui_MainWindow(QWidget):
         self.password_label.setText(self._translate("MainWindow", "Password:"))
         self.status_label.setText(self._translate("MainWindow", "Status:"))
         self.login_button.setText(self._translate("MainWindow", "Login"))
+        self.login_button.setShortcut(self._translate("MainWindow", "Return"))
         self.register_button.setText(self._translate("MainWindow", "Register"))
         self.checkBox.setText(self._translate("MainWindow", "Show password"))
 
@@ -1009,4 +1058,5 @@ if __name__ == "__main__":
             main()
     except KeyboardInterrupt:
         print("Program has exited because of keyboard interruption.")
+
 

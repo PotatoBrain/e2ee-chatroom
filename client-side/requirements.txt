@@ -3,3 +3,4 @@ psutil
 rsa
 requests[socks]
 pycryptodome
+

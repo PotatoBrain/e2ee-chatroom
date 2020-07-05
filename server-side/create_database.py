@@ -42,3 +42,4 @@ def create_database():
 
     update_settings.update_config(database_name=db_name,
                                   table_name=table_name)
+

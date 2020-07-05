@@ -65,7 +65,7 @@ get_request(sys.argv[1])"""
             import requests
         except ModuleNotFoundError:
             os.system('pip3.8 install requests[socks]')
-            check_for_updates()
+            self.check_for_updates()
         self.make_if_not_exists()
         # This checks if there are any new files to download, as opposed to updating them.
         site_info = self.get_text_trough_Tor(
@@ -142,6 +142,7 @@ try:
     import random
     import time
     import rsa
+    import sys
     import re
 except ModuleNotFoundError:
     print('SOME PACKAGES ARE NOT INSTALLED!')
@@ -153,33 +154,14 @@ except ModuleNotFoundError:
 os.system('PS1=$\nPROMPT_COMMAND=\necho -en "\033]0;Server\a"; clear')
 
 if not restart:
-    # A few static methods.
-    def rsa_encrypt_a_message(message, public_key):
-        return rsa.encrypt(message, public_key)
-
-
-    def rsa_encrypt_json_object(dictionary, public_key):
-        json_object = json.dumps(dictionary).encode('utf-8')
-        return rsa_encrypt_a_message(message=json_object,
-                                    public_key=public_key)
-
-
+    
+    
     # Define our main thread and start them on every
     class SocketServer():
         def __init__(self):
             self.HEADER_LENGTH = 128
             # Get stuff from the json config file, you can edit your settings for your room there.
-            try:
-                _, self.TOR_HIDDEN_ADDRESS, self.database_name, self.table_name, self.IP, self.PORT, self.BIT_SIZE, \
-                    self.ROOM_NAME, self.ROOM_RULES, self.required_client_version, self.ban_permission, self.kick_permission, self.mute_permission, \
-                    self.image_permission = get_settings.return_config("server_config").values()
-                if self.database_name == 'no-database':
-                    create_database.create_database()
-                    print('------------------------- Database created -------------------------')
-                self.reload_permissions()
-            except:
-                print("Your server_config.json file is deprecated! Download the newest one and change your settings manually(maybe to be automated)")
-                return
+            self.reload_permissions()
             # Create a socket
             # socket.AF_INET - address family, IPv4, some other possible are AF_INET6, AF_BLUETOOTH, AF_UNIX
             # socket.SOCK_STREAM - TCP, connection-based, socket.SOCK_DGRAM - UDP, connectionless, datagrams,
@@ -209,12 +191,14 @@ if not restart:
             (self.pubkey, self.privkey) = rsa.newkeys(self.BIT_SIZE,
                                                     poolsize=multiprocessing.cpu_count())
             self.aes_key = get_random_bytes(32)  # for AES256 encryption.
+            self.aes_key_to_go = key_to_english(self.aes_key)
             self.room_info = json.dumps({'BIT_SIZE': self.BIT_SIZE,
                                         'ROOM_NAME': self.ROOM_NAME,
                                         'ROOM_RULES': self.ROOM_RULES,
-                                        'CLIENT_REQUIRED': self.required_client_version}).encode('utf-8')
-            print('YOU CAN POST/SHARE THE CURRENT PUBLIC SERVER KEY SOMEWHERE ELSE SO PEOPLE CAN COMPARE AND VERIFY THEM,\
-                IN ORDER TO PREVENT MITM ATTACKS!!!\nRoom public key:', self.pubkey)
+                                        'CLIENT_REQUIRED': self.required_client_version,
+                                        'MAX_CHARS': self.max_chars}).encode('utf-8')
+            print('YOU CAN POST/SHARE THE CURRENT PUBLIC SERVER KEY SOMEWHERE ELSE SO PEOPLE CAN COMPARE AND VERIFY THEM,'\
+                '\nIN ORDER TO PREVENT MITM ATTACKS!!!\nRoom public key:', self.pubkey)
             print(f'Listening for connections on {self.IP}:{self.PORT}, {self.TOR_HIDDEN_ADDRESS}')
             self.start_threads()
 
@@ -243,18 +227,18 @@ if not restart:
                         del self.clients[notified_socket]
                         color_code = '#FFFFFF'
                         users = len(self.clients.keys())
-                        for next_client_socket in self.clients:
-                            # Send the color code of the matching privilege, number of total users, username and the actual
-                            # message.
-                            complete_message = {'color_code': color_code,
+                        complete_message = {'color_code': color_code,
                                                 'users': users,
                                                 'username': username,
                                                 'message': 'has disconnected.'}
+                        for next_client_socket in self.clients:
+                            # Send the color code of the matching privilege, number of total users, username and the actual
+                            # message.
                             try:
-                                final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                                    public_key=self.clients[next_client_socket][2])
-                                final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                                next_client_socket.send(final_message_header + final_message)
+                                self.send_aes_message(
+                                    client_socket=next_client_socket,
+                                    message=complete_message,
+                                    public_key=self.clients[next_client_socket][2])
                             except OverflowError:
                                 break
             except KeyboardInterrupt:
@@ -400,13 +384,14 @@ if not restart:
                         complete_message['color_code'] = '#FF0000'
                         complete_message['username'] = 'Ban hammer'
                         complete_message['message'] = "You have been banned."
-                        final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                            public_key=self.clients[banned_user_socket][2])
-                        final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
+                        
                         try:
-                            banned_user_socket.send(final_message_header + final_message)
+                            self.send_aes_message(
+                                client_socket=banned_user_socket,
+                                message=complete_message,
+                                public_key=self.clients[banned_user_socket][2])
                             self.banned_users_but_connected.append(banned_user_socket)
-                            print('Closed connection from:{}'.format(main_dict[0]))
+                            print('Closed connection from:{}'.format(user_to_ban))
                             # Remove from list for socket.socket()
                             self.sockets_list.remove(banned_user_socket)
                             # Remove from our list of users
@@ -422,10 +407,10 @@ if not restart:
                         complete_message['message'] = '{} has been banned.'.format(user_to_ban)
                         for next_client_socket in self.clients:
                             try:
-                                final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                                    public_key=self.clients[next_client_socket][2])
-                                final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                                next_client_socket.send(final_message_header + final_message)
+                                self.send_aes_message(
+                                    client_socket=next_client_socket,
+                                    message=complete_message,
+                                    public_key=self.clients[next_client_socket][2])
                             except OverflowError:
                                 break
             complete_message['color_code'] = '#FFFFFF'
@@ -479,6 +464,7 @@ if not restart:
                     # Unban the user
                     self.unban_user(user_to_unban)
                     unbanned_users.append(user_to_unban)
+                    
             if unbanned_users:
                 unbanned_users_info = ''
                 for user in unbanned_users:
@@ -507,29 +493,17 @@ if not restart:
                     command='image')
                 return
             image_url = message.split()[1]
-            # Check if the url is actually the location link the of the image - it SHOULD in theory give us some error.
-            with tempfile.TemporaryFile() as tempf:
-                proc = subprocess.Popen(['torsocks', 'python3.8',
-                                        '{}/get_image_from_website.py'.format(os.getcwd()),
-                                        '{}'.format(0), '{}'.format(image_url)], stdout=tempf)
-                proc.wait()
-                tempf.seek(0)
-                image_exists = tempf.read().decode('utf-8')
-            if image_exists.strip() == 'False':
-                complete_message['color_code'] = '#ff6060'
-                complete_message['username'] = 'Image'
-                complete_message['message'] = "Please use a valid image location link."
-                self.send_message(thread_number=thread_number, complete_message=complete_message)
-                return
             complete_message['message'] = '/get_image {}'.format(image_url)
             # Tell clients to get that image from Tor.
             for client_socket in self.clients:
-                final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                        public_key=self.clients[client_socket]
-                                                        [2])
-                final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                client_socket.send(final_message_header + final_message)
-        
+                try:
+                    self.send_aes_message(
+                        client_socket=client_socket,
+                        message=complete_message,
+                        public_key=self.clients[client_socket][2])
+                except OverflowError:
+                    break
+
         def command_update(self, thread_number, complete_message, username, message):
             if message.strip() == '/update':
                 self.arguments_needed(thread_number=thread_number, complete_message=complete_message,
@@ -571,11 +545,10 @@ if not restart:
                         
                     for client_socket in self.clients:
                         try:
-                            final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                                public_key=self.clients[client_socket]
-                                                                [2])
-                            final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                            client_socket.send(final_message_header + final_message)
+                            self.send_aes_message(
+                                    client_socket=client_socket,
+                                    message=complete_message,
+                                    public_key=self.clients[client_socket][2])
                         except OverflowError:
                             break
                 else:
@@ -614,14 +587,11 @@ if not restart:
         
         def regular_message(self, complete_message):
             for client_socket in self.clients:
-                # Send the color code of the matching privilege, number of total users, username and the
-                # actual message.
                 try:
-                    final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                        public_key=self.clients[client_socket]
-                                                        [2])
-                    final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                    client_socket.send(final_message_header + final_message)
+                    self.send_aes_message(
+                        client_socket=client_socket,
+                        message=complete_message,
+                        public_key=self.clients[client_socket][2])
                 except OverflowError:
                     break
                 
@@ -632,6 +602,11 @@ if not restart:
             complete_message['message'] = 'Server permissions reloaded successfully.'
             self.send_message(thread_number=thread_number, complete_message=complete_message)
         
+        def message_too_long(self, thread_number, complete_message, message_size):
+            complete_message['color_code'] = '#ff6060'
+            complete_message['username'] = 'Message'
+            complete_message['message'] = 'Your message is {0} characters long, and the character limit is {1}.'.format(message_size, self.max_chars)
+            self.send_message(thread_number=thread_number, complete_message=complete_message)
 
         def run(self, thread_number):
             print("[Thr {}] started.".format(thread_number))
@@ -645,9 +620,8 @@ if not restart:
                 client_socket, client_address = self.server_socket.accept()
 
                 message = self.receive_message(client_socket)
-                if message is not None:
+                if message:
                     try:
-                        print('message for the logging in - ', message)
                         info_message = message.decode('utf-8')
                         if info_message == "INFO-PLS":
                             print('room info:', self.room_info)
@@ -693,17 +667,17 @@ if not restart:
                                                 'message': 'has joined.'}
                             for next_client_socket in self.clients:
                                 # Send the message someone joined.
+                                
                                 try:
-                                    final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                                        public_key=self.clients[next_client_socket]
-                                                                        [2])
-                                    final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                                    next_client_socket.send(final_message_header + final_message)
+                                    self.send_aes_message(
+                                        client_socket=next_client_socket,
+                                        message=complete_message,
+                                        public_key=self.clients[next_client_socket][2])
                                 except OverflowError:
                                     break
                             # Also save username and other stuff.
                             id_identifier = random.randint(1000000000000000, 9999999999999999)  # Will be used in the future if I somehow
-                            # Figure out how to upload photos from computers directyl - I made it in the first day, that wasn't the problem..
+                            # Figure out how to upload photos from computers directly - I made it in the first day, that wasn't the problem..
                             # what was is that he ciphertext got changed as it came to the server, and I even tried it over localhost..
                             # so it's not the Tor, I suspect it has to be something either with the sockets or PyQt5 library, something
                             # that I may be missing, but I have literally spent a week trying to figure it out..
@@ -715,8 +689,9 @@ if not restart:
                             print('Accepted new connection from {}:{}, username: {}'.format(*client_address, username))
                         display_message = {'login_status': login_status, 
                                         'users': users,
+                                        'aes_key': self.aes_key_to_go,
                                         'id_identifier': id_identifier}
-                        display_message = rsa_encrypt_json_object(dictionary=display_message,
+                        display_message = self.rsa_encrypt_json_object(dictionary=display_message,
                                                             public_key=public_key)
                         display_message_header = f"{len(display_message):<{self.HEADER_LENGTH}}".encode('utf-8')
                         client_socket.send(display_message_header + display_message)
@@ -731,7 +706,6 @@ if not restart:
                     print('1')
                     # If False, client disconnected, clean
                     if message is False:
-                        print('why are we here.. just to suffer?')
                         print('Closed connection from:{}'.format(main_dict[0]))
                         username = main_dict[0]
                         # Remove from list for socket.socket()
@@ -746,17 +720,27 @@ if not restart:
                             # Send the color code of the matching privilege, number of total users, username and the actual
                             # message.
                             try:
-                                final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                                    public_key=self.clients[next_client_socket]
-                                                                    [2])
-                                final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                                next_client_socket.send(final_message_header + final_message)
+                                self.send_aes_message(
+                                    client_socket=next_client_socket,
+                                    message=complete_message,
+                                    public_key=self.clients[next_client_socket][2])
                             except OverflowError:
                                 break
                     else:
                         print('2')
-                        print('message: ', message)
-                        message = self.rsa_decrypt_a_message(encrypted_message=message)
+                        user_aes_key = main_dict[3].get('aes_key')
+                        
+                        decrypted_initialization_vector = self.rsa_decrypt_a_message(encrypted_message=message)
+                        aes_encrypted_message = self.receive_message(self.notified_socket[thread_number])
+                        
+                        message = self.aes_decrypt_a_message(iv=decrypted_initialization_vector,
+                                                             key=user_aes_key,
+                                                             aes_encrypted_ciphertext=aes_encrypted_message)
+                        if not message:
+                            # Something broke.
+                            print('decrypted_initialization_vector is: ', decrypted_initialization_vector)
+                            print('aes_encrypted_message is: ', aes_encrypted_message)
+                            return
                         print('3')
                         users = len(self.clients.keys())
                         username = main_dict[0]
@@ -770,8 +754,13 @@ if not restart:
                                             'users': users,
                                             'username': username,
                                             'message': message}
-
+                        message_size = sys.getsizeof(message)-49
+                        if message_size > self.max_chars:
+                            self.message_too_long(thread_number=thread_number, complete_message=complete_message,
+                                message_size=message_size)
+                            return
                         # Check if the user has executed any known commands or not.
+
                         if message.startswith('/'):
                             if message.lower().startswith('/help'):
                                 if message.lower().strip() == '/help':
@@ -869,12 +858,24 @@ if not restart:
                                         'message': 'has disconnected.'}
                     for next_client_socket in self.clients:
                         try:
-                            final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                                public_key=self.clients[next_client_socket][2])
-                            final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-                            next_client_socket.send(final_message_header + final_message)
+                            self.send_aes_message(
+                                client_socket=next_client_socket,
+                                message=complete_message,
+                                public_key=self.clients[next_client_socket][2])
                         except OverflowError:
-                            break
+                                break
+                    # try:
+                    #     encrypted_initialization_vector, encrypted_message = self.aes_encrypt_a_message(
+                    #         public_key=self.clients[next_client_socket][2], 
+                    #         dictionary=complete_message)
+                        
+                    #     final_message_header = f"{str(len(encrypted_initialization_vector)):<{self.HEADER_LENGTH}}".encode('utf-8')
+                    #     next_client_socket.send(final_message_header + encrypted_initialization_vector)
+                        
+                    #     final_message_header = f"{str(len(encrypted_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
+                    #     next_client_socket.send(final_message_header + encrypted_message)
+                    # except OverflowError:
+                    #     break
 
         # Handles message receiving
         def receive_message(self, client_socket):
@@ -909,12 +910,22 @@ if not restart:
                 final_message = message
             return final_message
 
+        def send_aes_message(self, client_socket, message, public_key):
+            encrypted_initialization_vector, encrypted_message = self.aes_encrypt_a_message(
+                public_key=public_key, 
+                dictionary=message)
+                    
+            final_message_header = f"{str(len(encrypted_initialization_vector)):<{self.HEADER_LENGTH}}".encode('utf-8')
+            client_socket.send(final_message_header + encrypted_initialization_vector)
+            
+            final_message_header = f"{str(len(encrypted_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
+            client_socket.send(final_message_header + encrypted_message)
+
         def send_message(self, thread_number, complete_message):
-            final_message = rsa_encrypt_json_object(dictionary=complete_message,
-                                                    public_key=self.clients[self.notified_socket[
-                                                    thread_number]][2])
-            final_message_header = f"{str(len(final_message)):<{self.HEADER_LENGTH}}".encode('utf-8')
-            self.notified_socket[thread_number].send(final_message_header + final_message)
+            self.send_aes_message(
+                client_socket=self.notified_socket[thread_number],
+                message=complete_message,
+                public_key=self.clients[self.notified_socket[thread_number]][2])
 
         @staticmethod
         def sanitize_data(data):
@@ -1043,20 +1054,37 @@ if not restart:
             return False
         
         def reload_permissions(self):
-            _, self.TOR_HIDDEN_ADDRESS, self.database_name, self.table_name, self.IP, self.PORT, self.BIT_SIZE, \
-                self.ROOM_NAME, self.ROOM_RULES, self.required_client_version, self.ban_permission, self.kick_permission, self.mute_permission, \
-                self.image_permission = get_settings.return_config("server_config").values()
-            self.ranks = get_settings.return_config("permissions")
-            self.rank_colors = get_settings.return_config('rank_colors')
-            self.ban_permission = int(self.ban_permission)
-            self.kick_permission = int(self.kick_permission)
-            self.mute_permission = int(self.mute_permission)
-            self.image_permission = int(self.image_permission)
-            self.owner_rank = self.ranks.get(str(100))
-            self.ban_permission_rank = self.ranks.get(str(self.ban_permission))
-            self.kick_permission_rank = self.ranks.get(str(self.kick_permission))
-            self.mute_permission_rank = self.ranks.get(str(self.mute_permission))
-            self.image_permission_rank = self.ranks.get(str(self.image_permission))
+            try:
+                _, self.TOR_HIDDEN_ADDRESS, self.database_name, self.table_name, self.IP, self.PORT, self.BIT_SIZE, \
+                    self.ROOM_NAME, self.ROOM_RULES, self.required_client_version, self.max_chars, self.ban_permission, \
+                    self.kick_permission, self.mute_permission, self.image_permission = get_settings.return_config("server_config").values()
+                if self.database_name == 'no-database':
+                    create_database.create_database()
+                    print('------------------------- Database created -------------------------')
+                    self.reload_permissions()
+                self.ranks = get_settings.return_config("permissions")
+                self.rank_colors = get_settings.return_config('rank_colors')
+                self.ban_permission = int(self.ban_permission)
+                self.kick_permission = int(self.kick_permission)
+                self.mute_permission = int(self.mute_permission)
+                self.image_permission = int(self.image_permission)
+                self.owner_rank = self.ranks.get(str(100))
+                self.ban_permission_rank = self.ranks.get(str(self.ban_permission))
+                self.kick_permission_rank = self.ranks.get(str(self.kick_permission))
+                self.mute_permission_rank = self.ranks.get(str(self.mute_permission))
+                self.image_permission_rank = self.ranks.get(str(self.image_permission))
+            except:
+                print("Your server_config.json file is deprecated! Download the newest one and change your settings manually(maybe to be automated)")
+                return
+
+        @staticmethod
+        def rsa_encrypt_a_message(message, public_key):
+            return rsa.encrypt(message, public_key)
+
+        def rsa_encrypt_json_object(self, dictionary, public_key):
+            json_object = json.dumps(dictionary).encode('utf-8')
+            return self.rsa_encrypt_a_message(message=json_object,
+                                        public_key=public_key)
 
         def aes_encrypt_a_message(self, public_key, *, dictionary):
             data = json.dumps(dictionary).encode()
@@ -1064,15 +1092,13 @@ if not restart:
             ct_bytes = cipher.encrypt(pad(data, AES.block_size))
             iv = b64encode(cipher.iv)
             ct = b64encode(ct_bytes)
-            return rsa_encrypt_a_message(message=iv, public_key=public_key), ct
+            return self.rsa_encrypt_a_message(message=iv, public_key=public_key), ct
 
         def rsa_decrypt_a_message(self, encrypted_message):
             try:
                 message = rsa.decrypt(encrypted_message, self.privkey)
                 if type(message) is str:
                     return message
-                print('not str :(')
-                print('message     ', message)
                 return message.decode('utf-8')
             except rsa.pkcs1.DecryptionError as e:
                 print(e)
@@ -1088,22 +1114,16 @@ if not restart:
             return self.next_json_object[thread_number]
 
         def aes_decrypt_a_message(self, iv, key, *, aes_encrypted_ciphertext):
-            # try:
-            # print('ciphertext is ', aes_encrypted_ciphertext)
-            print('ciphertext type ', type(aes_encrypted_ciphertext))
-            print('ciphertext length ', len(aes_encrypted_ciphertext))
-            print('iv type ', type(iv))
-            print('iv is ', iv)
-            print('iv length ', len(iv))
-            iv = b64decode(iv)
-            ct = b64decode(aes_encrypted_ciphertext)
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            data = unpad(cipher.decrypt(ct), AES.block_size)
-            # Should return the decrypted ciphertext which is the image in bytes
-            return data
-            # except (ValueError, KeyError):
-            #     # Decryption failed.
-            #     return False
+            try:
+                iv = b64decode(iv)
+                ct = b64decode(aes_encrypted_ciphertext)
+                cipher = AES.new(key, AES.MODE_CBC, iv)
+                data = unpad(cipher.decrypt(ct), AES.block_size)
+                # Should return the decrypted ciphertext which is the image in bytes
+                return data.decode()
+            except (ValueError, KeyError):
+                # Decryption failed.
+                return False
 
 
         def retry_json(self, thread_number, received_info):
@@ -1111,7 +1131,6 @@ if not restart:
                 self.next_json_object[thread_number] = json.loads(received_info)
             except ValueError:
                 time.sleep(1)
-                print(received_info)
                 new_json_object = received_info[:-3]
                 if new_json_object == '':
                     raise TypeError 
@@ -1123,3 +1142,4 @@ if not restart:
         __author__ = "PotatoBrain"
         a = SocketServer()
         a.close()
+
