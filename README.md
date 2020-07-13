@@ -5,6 +5,9 @@ Made using python3.8 and additionally encrypted communication over Tor.
 
 **MORE FEATURES COMING SOON.**
 
+# Linux only :(
+This project does not support Windows 10, it may in the future, as it is a hassle to figure everything out and to get it working there, for now.
+
 # Python3.8
 Added hopefully useful instructions in the **Python and pip installation help** directory to assist users in installing python and it's installation package.
 
@@ -12,9 +15,7 @@ Basically you need python version 3.8 and it's installation package pip version 
 
 # You have to have Tor installed
 To be automated.
-
-# Linux only :(
-This project does not support Windows 10, it may in the future, as it is a hassle to figure everything out and to get it working there, for now.
+To install it, you can run: **sudo apt-get install tor** , or the package manager that your distribution comes with.
 
 # Running the program
 If you want to connect to someone's room you will have to download the client-side program from https://github.com/PotatoBrain/e2ee-chatroom/tree/master/client-side , and then inside that folder open a terminal and type 
