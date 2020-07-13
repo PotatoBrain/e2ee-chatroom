@@ -1,0 +1,11 @@
+Pip versin 3.8:
+ This works for Ubuntu, and for Debian, I believe that pip3.8 comes pre-installed, just that it needs the moving part (step 5 and 6), can't verify because I can't get a Debian VM working..
+ 1. sudo apt-get install python3  - needed so we can upgrade it's pip to 3.8 verison
+ 2. sudo apt-get install python3.8  - may not even be needed, find another way to install on your OS
+ 3. sudo apt-get install python3-pip  - Because python3.8 doesn't have a pip in the apt directory
+ 4. pip3 install -U pip3  - Upgrade the pip to the latest version, which would be 3.8, but it's not done yet.
+ 5. sudo cp /home/USER/.local/bin/pip3.8 /usr/local/bin/pip3.8  - This copies the pip3.8 file to a directory so we can use it in the terminal.
+ 6. sudo cp /home/USER/.local/bin/pip3.8 /usr/bin/pip3.8  - I don't know for what this is needed, but in Debian it's in there, when I type "whereis pip3.8" :/
+ 7. Verify everything by doing "pip3.8 -V". If it shows a version, then you're golden.
+
+ OR just run our little Python file with python2/python3) that does this for you :), after doing the 1st step download the program and run it with from the terminal, with a python version you have. If you don't have one, you can just follow these simple steps, and if you can't get python 3.8 to install, you can try installing it from source by following this guide's first 7 steps: https://linuxize.com/post/how-to-install-python-3-8-on-debian-10/ 

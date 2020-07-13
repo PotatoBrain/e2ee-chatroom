@@ -6,10 +6,9 @@ Made using python3.8 and additionally encrypted communication over Tor.
 **MORE FEATURES COMING SOON.**
 
 # Python3.8
-Probably to be automated.
+Added hopefully useful instructions in the **Python and pip installation help** directory to assist users in installing python and it's installation package.
 
-You will need to have pre-installed python3.8, and it's pip, so pip3.8.
-It has to be pip3.8, not pip3.7, not pip3, not pip, and same goes for the Python versions, it has to be Python3.8.
+Basically you need python version 3.8 and it's installation package pip version 3.8.
 
 # You have to have Tor installed
 To be automated.
@@ -35,11 +34,8 @@ Incoming
 Our room's V3 Tor hidden service address: 735tmznegwcmepvctwt7ipnxps6yqfmsqofp5fujie4kvkgrct6kczad.onion
 (may not be always online)
 
-
-Login preview: http://popfilesxuru7lsr.onion/~linuxrocks2/LoginPreview.png
-
-Room preview: http://popfilesxuru7lsr.onion/~linuxrocks/room_example.png
-
+You can see image previews in the added images.
+And if you are interested, consider checking out the CHANGELOG.md and TODO_list.md to see the progress we have made so far, and the progress we plan on making.
 
 Please note that I am still a beginner-intermediate Python hobbyist programmer.
 I am aware that the code may not be good-looking, efficient or the best. My goal is to make it work, and then improve it with time.
