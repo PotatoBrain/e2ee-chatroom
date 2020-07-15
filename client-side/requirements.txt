@@ -3,4 +3,4 @@ psutil
 rsa
 requests[socks]
 pycryptodome
-
+opencv-python
